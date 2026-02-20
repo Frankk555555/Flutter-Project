@@ -2,9 +2,9 @@
 class DatabaseConfig {
   // MySQL connection settings
   static const String host = 'localhost';
-  static const int port = 3306;
+  static const int port = 3307;
   static const String user = 'stockapp';
-  static const String password = '1234';
+  static const String password = 'Iylqv3FscukyV5tV';
   static const String database = 'stock_management';
 
   // Connection string for display

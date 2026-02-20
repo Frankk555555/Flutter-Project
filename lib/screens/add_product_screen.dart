@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/product.dart';
 import '../providers/product_provider.dart';
+import '../services/category_service.dart';
 
 /// Screen for adding a new product
 class AddProductScreen extends StatefulWidget {
@@ -22,25 +23,39 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _minQuantityController = TextEditingController(text: '10');
   final _imageUrlController = TextEditingController();
   
-  String _selectedCategory = 'CPU';
+  String? _selectedCategory;
   String? _selectedImagePath;
   bool _isLoading = false;
+  List<String> _categories = [];
+  bool _isCategoryLoading = true;
 
-  final List<String> _defaultCategories = [
-    'CPU',
-    'GPU / การ์ดจอ',
-    'RAM',
-    'Motherboard',
-    'Storage / SSD / HDD',
-    'Power Supply',
-    'Case / เคส',
-    'Monitor / จอ',
-    'Keyboard',
-    'Mouse',
-    'Headset / หูฟัง',
-    'อุปกรณ์เสริม',
-    'อื่นๆ',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    final categoryService = CategoryService();
+    try {
+      final categories = await categoryService.getAllCategories();
+      if (mounted) {
+        setState(() {
+          _categories = categories.map((c) => c.name).toList();
+          if (_categories.isNotEmpty) {
+            _selectedCategory = _categories.first;
+          }
+          _isCategoryLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isCategoryLoading = false);
+      }
+    } finally {
+      await categoryService.close();
+    }
+  }
 
   @override
   void dispose() {
@@ -163,20 +178,28 @@ class _AddProductScreenState extends State<AddProductScreen> {
               const SizedBox(height: 16),
 
               // Category Dropdown
-              DropdownButtonFormField<String>(
-                value: _selectedCategory,
-                decoration: const InputDecoration(
-                  labelText: 'หมวดหมู่ *',
-                  prefixIcon: Icon(Icons.category),
-                  border: OutlineInputBorder(),
-                ),
-                items: _defaultCategories.map((cat) {
-                  return DropdownMenuItem(value: cat, child: Text(cat));
-                }).toList(),
-                onChanged: (value) {
-                  setState(() => _selectedCategory = value!);
-                },
-              ),
+              _isCategoryLoading
+                  ? const LinearProgressIndicator()
+                  : DropdownButtonFormField<String>(
+                      value: _selectedCategory,
+                      decoration: const InputDecoration(
+                        labelText: 'หมวดหมู่ *',
+                        prefixIcon: Icon(Icons.category),
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _categories.map((cat) {
+                        return DropdownMenuItem(value: cat, child: Text(cat));
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() => _selectedCategory = value!);
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'กรุณาเลือกหมวดหมู่';
+                        }
+                        return null;
+                      },
+                    ),
               const SizedBox(height: 16),
 
               // Price and Quantity Row
@@ -334,7 +357,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       description: _descriptionController.text.trim().isNotEmpty
           ? _descriptionController.text.trim()
           : null,
-      category: _selectedCategory,
+      category: _selectedCategory ?? '',
       price: double.parse(_priceController.text),
       quantity: int.parse(_quantityController.text),
       minQuantity: int.tryParse(_minQuantityController.text) ?? 10,

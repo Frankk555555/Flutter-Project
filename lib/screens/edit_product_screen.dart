@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import '../models/product.dart';
 import '../providers/product_provider.dart';
 import '../services/product_service.dart';
+import '../services/category_service.dart';
 
 /// Screen for editing an existing product
 class EditProductScreen extends StatefulWidget {
@@ -25,31 +26,43 @@ class _EditProductScreenState extends State<EditProductScreen> {
   final _minQuantityController = TextEditingController();
   final _imageUrlController = TextEditingController();
 
-  String _selectedCategory = 'CPU';
+  String? _selectedCategory;
   String? _selectedImagePath;
   bool _isLoading = true;
   bool _isSaving = false;
-
-  final List<String> _defaultCategories = [
-    'CPU',
-    'GPU / การ์ดจอ',
-    'RAM',
-    'Motherboard',
-    'Storage / SSD / HDD',
-    'Power Supply',
-    'Case / เคส',
-    'Monitor / จอ',
-    'Keyboard',
-    'Mouse',
-    'Headset / หูฟัง',
-    'อุปกรณ์เสริม',
-    'อื่นๆ',
-  ];
+  List<String> _categories = [];
+  bool _isCategoryLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadProduct();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    await Future.wait([
+      _loadCategories(),
+      _loadProduct(),
+    ]);
+  }
+
+  Future<void> _loadCategories() async {
+    final categoryService = CategoryService();
+    try {
+      final categories = await categoryService.getAllCategories();
+      if (mounted) {
+        setState(() {
+          _categories = categories.map((c) => c.name).toList();
+          _isCategoryLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isCategoryLoading = false);
+      }
+    } finally {
+      await categoryService.close();
+    }
   }
 
   Future<void> _loadProduct() async {
@@ -65,6 +78,10 @@ class _EditProductScreenState extends State<EditProductScreen> {
         _minQuantityController.text = product.minQuantity.toString();
         _imageUrlController.text = product.imageUrl ?? '';
         _selectedCategory = product.category;
+        // ถ้าหมวดหมู่ของสินค้าไม่อยู่ในรายการจากฐานข้อมูล ให้เพิ่มเข้าไป
+        if (!_categories.contains(product.category) && product.category.isNotEmpty) {
+          _categories.add(product.category);
+        }
         _isLoading = false;
       });
     } else if (mounted) {
@@ -201,22 +218,30 @@ class _EditProductScreenState extends State<EditProductScreen> {
                     const SizedBox(height: 16),
 
                     // Category Dropdown
-                    DropdownButtonFormField<String>(
-                      value: _defaultCategories.contains(_selectedCategory)
-                          ? _selectedCategory
-                          : _defaultCategories.first,
-                      decoration: const InputDecoration(
-                        labelText: 'หมวดหมู่ *',
-                        prefixIcon: Icon(Icons.category),
-                        border: OutlineInputBorder(),
-                      ),
-                      items: _defaultCategories.map((cat) {
-                        return DropdownMenuItem(value: cat, child: Text(cat));
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() => _selectedCategory = value!);
-                      },
-                    ),
+                    _isCategoryLoading
+                        ? const LinearProgressIndicator()
+                        : DropdownButtonFormField<String>(
+                            value: _categories.contains(_selectedCategory)
+                                ? _selectedCategory
+                                : (_categories.isNotEmpty ? _categories.first : null),
+                            decoration: const InputDecoration(
+                              labelText: 'หมวดหมู่ *',
+                              prefixIcon: Icon(Icons.category),
+                              border: OutlineInputBorder(),
+                            ),
+                            items: _categories.map((cat) {
+                              return DropdownMenuItem(value: cat, child: Text(cat));
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() => _selectedCategory = value!);
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'กรุณาเลือกหมวดหมู่';
+                              }
+                              return null;
+                            },
+                          ),
                     const SizedBox(height: 16),
 
                     // Price and Quantity Row
@@ -376,7 +401,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
       description: _descriptionController.text.trim().isNotEmpty
           ? _descriptionController.text.trim()
           : null,
-      category: _selectedCategory,
+      category: _selectedCategory ?? '',
       price: double.parse(_priceController.text),
       quantity: int.parse(_quantityController.text),
       minQuantity: int.tryParse(_minQuantityController.text) ?? 10,

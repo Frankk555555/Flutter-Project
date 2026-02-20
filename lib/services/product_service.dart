@@ -55,6 +55,106 @@ class ProductService {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     ''');
+
+    // Create categories table
+    await conn.execute('''
+      CREATE TABLE IF NOT EXISTS categories (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(100) NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    // Create customers table
+    await conn.execute('''
+      CREATE TABLE IF NOT EXISTS customers (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(100) NOT NULL,
+        phone VARCHAR(20),
+        email VARCHAR(100),
+        address TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    ''');
+
+    // Create purchase_orders table
+    await conn.execute('''
+      CREATE TABLE IF NOT EXISTS purchase_orders (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        supplier_name VARCHAR(100) NOT NULL,
+        order_date DATE NOT NULL,
+        total_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+        status ENUM('pending', 'received', 'cancelled') DEFAULT 'pending',
+        note TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    // Create purchase_order_items table
+    await conn.execute('''
+      CREATE TABLE IF NOT EXISTS purchase_order_items (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        purchase_order_id INT NOT NULL,
+        product_id INT NOT NULL,
+        quantity INT NOT NULL,
+        unit_price DECIMAL(10,2) NOT NULL,
+        total_price DECIMAL(12,2) NOT NULL DEFAULT 0
+      )
+    ''');
+
+    // Create goods_received table
+    await conn.execute('''
+      CREATE TABLE IF NOT EXISTS goods_received (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        purchase_order_id INT,
+        received_date DATE NOT NULL,
+        received_by VARCHAR(100),
+        note TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    // Create goods_received_items table
+    await conn.execute('''
+      CREATE TABLE IF NOT EXISTS goods_received_items (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        goods_received_id INT NOT NULL,
+        product_id INT NOT NULL,
+        quantity INT NOT NULL,
+        unit_price DECIMAL(10,2) NOT NULL,
+        total_price DECIMAL(12,2) NOT NULL DEFAULT 0
+      )
+    ''');
+
+    // Create sales table
+    await conn.execute('''
+      CREATE TABLE IF NOT EXISTS sales (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        customer_id INT,
+        sale_date DATE NOT NULL,
+        total_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+        discount DECIMAL(10,2) DEFAULT 0,
+        net_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+        payment_method ENUM('cash', 'transfer', 'credit') DEFAULT 'cash',
+        note TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    // Create sale_items table
+    await conn.execute('''
+      CREATE TABLE IF NOT EXISTS sale_items (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        sale_id INT NOT NULL,
+        product_id INT NOT NULL,
+        quantity INT NOT NULL,
+        unit_price DECIMAL(10,2) NOT NULL,
+        discount DECIMAL(10,2) DEFAULT 0,
+        total_price DECIMAL(12,2) NOT NULL DEFAULT 0
+      )
+    ''');
   }
 
   /// Create - Add a new product
