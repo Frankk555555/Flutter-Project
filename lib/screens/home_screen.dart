@@ -101,7 +101,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         Expanded(child: _buildDashboardCard(
                           'มูลค่าสต๊อก',
                           currencyFormat.format(_productSummary['totalValue'] ?? 0),
-                          Icons.attach_money, Colors.green,
+                          Icons.currency_exchange, Colors.green,
+                          customIcon: Text('฿', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.green)),
                         )),
                       ],
                     ),
@@ -268,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildDashboardCard(String title, String value, IconData icon, Color color, {String? subtitle}) {
+  Widget _buildDashboardCard(String title, String value, IconData icon, Color color, {String? subtitle, Widget? customIcon}) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -286,7 +287,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: color, size: 24),
+                  child: customIcon ?? Icon(icon, color: color, size: 24),
                 ),
               ],
             ),
