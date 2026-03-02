@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:printing/printing.dart';
 import '../services/transaction_service.dart';
 import '../services/category_service.dart';
 import '../services/customer_service.dart';
+import '../services/pdf_report_service.dart';
 
 /// Comprehensive reports screen with multiple tabs
 class ReportsScreen extends StatefulWidget {
@@ -90,6 +92,15 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
           ],
         ),
       ),
+      floatingActionButton: _isLoading
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _exportPdf,
+              icon: const Icon(Icons.picture_as_pdf),
+              label: const Text('PDF'),
+              backgroundColor: Colors.red[600],
+              foregroundColor: Colors.white,
+            ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
@@ -164,6 +175,47 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
               ],
             ),
     );
+  }
+
+  Future<void> _exportPdf() async {
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final pdfDoc = await PdfReportService.generateReport(
+        salesSummary: _salesSummary,
+        purchaseSummary: _purchaseSummary,
+        topProducts: _topProducts,
+        categoryReport: _categoryReport,
+        customerReport: _customerReport,
+        startDate: _startDate,
+        endDate: _endDate,
+      );
+
+      final pdfBytes = await pdfDoc.save();
+
+      // Close loading
+      if (mounted) Navigator.of(context).pop();
+
+      // Open preview / print / save dialog
+      if (mounted) {
+        await Printing.layoutPdf(
+          onLayout: (_) => pdfBytes,
+          name: 'Report_${DateFormat('yyyyMMdd').format(_startDate)}_${DateFormat('yyyyMMdd').format(_endDate)}',
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   Widget _buildSalesSummaryTab() {
