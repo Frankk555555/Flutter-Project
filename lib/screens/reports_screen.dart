@@ -178,8 +178,81 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
   }
 
   Future<void> _exportPdf() async {
+    // Show section selection dialog
+    final selected = await showDialog<Map<String, bool>>(
+      context: context,
+      builder: (context) {
+        bool sales = true;
+        bool topProducts = true;
+        bool category = true;
+        bool customer = true;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('เลือกประเภทรายงาน', style: TextStyle(fontWeight: FontWeight.bold)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CheckboxListTile(
+                    title: const Text('สรุปยอดขาย'),
+                    subtitle: const Text('ยอดขาย, ยอดซื้อ, กำไร'),
+                    value: sales,
+                    activeColor: Colors.indigo,
+                    onChanged: (v) => setDialogState(() => sales = v!),
+                  ),
+                  CheckboxListTile(
+                    title: const Text('สินค้าขายดี'),
+                    subtitle: const Text('อันดับสินค้าที่ขายได้มากที่สุด'),
+                    value: topProducts,
+                    activeColor: Colors.indigo,
+                    onChanged: (v) => setDialogState(() => topProducts = v!),
+                  ),
+                  CheckboxListTile(
+                    title: const Text('ตามประเภทสินค้า'),
+                    subtitle: const Text('จำนวนสินค้า, สต๊อก, มูลค่า'),
+                    value: category,
+                    activeColor: Colors.indigo,
+                    onChanged: (v) => setDialogState(() => category = v!),
+                  ),
+                  CheckboxListTile(
+                    title: const Text('ลูกค้า'),
+                    subtitle: const Text('คำสั่งซื้อ, ยอดซื้อรวม'),
+                    value: customer,
+                    activeColor: Colors.indigo,
+                    onChanged: (v) => setDialogState(() => customer = v!),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, null),
+                  child: const Text('ยกเลิก'),
+                ),
+                FilledButton.icon(
+                  onPressed: (sales || topProducts || category || customer)
+                      ? () => Navigator.pop(context, {
+                            'sales': sales,
+                            'topProducts': topProducts,
+                            'category': category,
+                            'customer': customer,
+                          })
+                      : null,
+                  icon: const Icon(Icons.picture_as_pdf),
+                  label: const Text('สร้าง PDF'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (selected == null) return; // User cancelled
+
     try {
       // Show loading
+      if (!mounted) return;
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -194,6 +267,10 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
         customerReport: _customerReport,
         startDate: _startDate,
         endDate: _endDate,
+        includeSales: selected['sales']!,
+        includeTopProducts: selected['topProducts']!,
+        includeCategory: selected['category']!,
+        includeCustomer: selected['customer']!,
       );
 
       final pdfBytes = await pdfDoc.save();

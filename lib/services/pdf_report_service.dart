@@ -20,6 +20,10 @@ class PdfReportService {
     required List<Map<String, dynamic>> customerReport,
     required DateTime startDate,
     required DateTime endDate,
+    bool includeSales = true,
+    bool includeTopProducts = true,
+    bool includeCategory = true,
+    bool includeCustomer = true,
   }) async {
     // Load Thai fonts
     final regularFont = await _loadFont('assets/fonts/Sarabun-Regular.ttf');
@@ -43,13 +47,15 @@ class PdfReportService {
         footer: (context) => _buildFooter(context, regularFont),
         build: (context) => [
           // Sales Summary Section
-          _buildSectionTitle('สรุปยอดขาย', boldFont),
-          pw.SizedBox(height: 8),
-          _buildSummaryTable(salesSummary, purchaseSummary, profit, currencyFormat, regularFont, boldFont),
-          pw.SizedBox(height: 24),
+          if (includeSales) ...[
+            _buildSectionTitle('สรุปยอดขาย', boldFont),
+            pw.SizedBox(height: 8),
+            _buildSummaryTable(salesSummary, purchaseSummary, profit, currencyFormat, regularFont, boldFont),
+            pw.SizedBox(height: 24),
+          ],
 
           // Top Products Section
-          if (topProducts.isNotEmpty) ...[
+          if (includeTopProducts && topProducts.isNotEmpty) ...[
             _buildSectionTitle('สินค้าขายดี', boldFont),
             pw.SizedBox(height: 8),
             _buildTopProductsTable(topProducts, currencyFormat, regularFont, boldFont),
@@ -57,7 +63,7 @@ class PdfReportService {
           ],
 
           // Category Report Section
-          if (categoryReport.isNotEmpty) ...[
+          if (includeCategory && categoryReport.isNotEmpty) ...[
             _buildSectionTitle('รายงานตามประเภทสินค้า', boldFont),
             pw.SizedBox(height: 8),
             _buildCategoryTable(categoryReport, currencyFormat, regularFont, boldFont),
@@ -65,7 +71,7 @@ class PdfReportService {
           ],
 
           // Customer Report Section
-          if (customerReport.isNotEmpty) ...[
+          if (includeCustomer && customerReport.isNotEmpty) ...[
             _buildSectionTitle('รายงานลูกค้า', boldFont),
             pw.SizedBox(height: 8),
             _buildCustomerTable(customerReport, currencyFormat, regularFont, boldFont),
