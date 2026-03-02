@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:printing/printing.dart';
+import 'dart:io';
 import '../services/transaction_service.dart';
 import '../services/category_service.dart';
 import '../services/customer_service.dart';
@@ -198,21 +198,31 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
 
       final pdfBytes = await pdfDoc.save();
 
+      // Save to Downloads folder
+      final downloadsDir = Directory('${Platform.environment['USERPROFILE']}\\Downloads');
+      final fileName = 'Report_${DateFormat('yyyyMMdd').format(_startDate)}_${DateFormat('yyyyMMdd').format(_endDate)}.pdf';
+      final file = File('${downloadsDir.path}\\$fileName');
+      await file.writeAsBytes(pdfBytes);
+
       // Close loading
       if (mounted) Navigator.of(context).pop();
 
-      // Open preview / print / save dialog
+      // Open PDF with default viewer
+      await Process.run('cmd', ['/c', 'start', '', file.path]);
+
       if (mounted) {
-        await Printing.layoutPdf(
-          onLayout: (_) => pdfBytes,
-          name: 'Report_${DateFormat('yyyyMMdd').format(_startDate)}_${DateFormat('yyyyMMdd').format(_endDate)}',
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('บันทึกไฟล์ PDF เรียบร้อย: $fileName'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) Navigator.of(context).pop();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('เกิดข้อผิดพลาด: $e'), backgroundColor: Colors.red),
         );
       }
     }

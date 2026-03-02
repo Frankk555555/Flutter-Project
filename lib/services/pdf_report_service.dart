@@ -1,9 +1,16 @@
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
 
-/// Service for generating PDF reports
+/// Service for generating PDF reports with Thai language support
 class PdfReportService {
+  /// Load Sarabun Thai font
+  static Future<pw.Font> _loadFont(String assetPath) async {
+    final fontData = await rootBundle.load(assetPath);
+    return pw.Font.ttf(fontData);
+  }
+
   /// Generate a comprehensive report PDF
   static Future<pw.Document> generateReport({
     required Map<String, dynamic> salesSummary,
@@ -14,7 +21,13 @@ class PdfReportService {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final pdf = pw.Document();
+    // Load Thai fonts
+    final regularFont = await _loadFont('assets/fonts/Sarabun-Regular.ttf');
+    final boldFont = await _loadFont('assets/fonts/Sarabun-Bold.ttf');
+
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(base: regularFont, bold: boldFont),
+    );
     final dateFormat = DateFormat('dd/MM/yyyy');
     final currencyFormat = NumberFormat('#,##0.00');
 
@@ -26,36 +39,36 @@ class PdfReportService {
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(40),
-        header: (context) => _buildHeader(dateFormat, startDate, endDate),
-        footer: (context) => _buildFooter(context),
+        header: (context) => _buildHeader(dateFormat, startDate, endDate, boldFont, regularFont),
+        footer: (context) => _buildFooter(context, regularFont),
         build: (context) => [
           // Sales Summary Section
-          _buildSectionTitle('Sales Summary / Summary'),
+          _buildSectionTitle('สรุปยอดขาย', boldFont),
           pw.SizedBox(height: 8),
-          _buildSummaryTable(salesSummary, purchaseSummary, profit, currencyFormat),
+          _buildSummaryTable(salesSummary, purchaseSummary, profit, currencyFormat, regularFont, boldFont),
           pw.SizedBox(height: 24),
 
           // Top Products Section
           if (topProducts.isNotEmpty) ...[
-            _buildSectionTitle('Top Selling Products'),
+            _buildSectionTitle('สินค้าขายดี', boldFont),
             pw.SizedBox(height: 8),
-            _buildTopProductsTable(topProducts, currencyFormat),
+            _buildTopProductsTable(topProducts, currencyFormat, regularFont, boldFont),
             pw.SizedBox(height: 24),
           ],
 
           // Category Report Section
           if (categoryReport.isNotEmpty) ...[
-            _buildSectionTitle('Report by Category'),
+            _buildSectionTitle('รายงานตามประเภทสินค้า', boldFont),
             pw.SizedBox(height: 8),
-            _buildCategoryTable(categoryReport, currencyFormat),
+            _buildCategoryTable(categoryReport, currencyFormat, regularFont, boldFont),
             pw.SizedBox(height: 24),
           ],
 
           // Customer Report Section
           if (customerReport.isNotEmpty) ...[
-            _buildSectionTitle('Customer Report'),
+            _buildSectionTitle('รายงานลูกค้า', boldFont),
             pw.SizedBox(height: 8),
-            _buildCustomerTable(customerReport, currencyFormat),
+            _buildCustomerTable(customerReport, currencyFormat, regularFont, boldFont),
           ],
         ],
       ),
@@ -65,7 +78,7 @@ class PdfReportService {
   }
 
   /// Build report header
-  static pw.Widget _buildHeader(DateFormat dateFormat, DateTime startDate, DateTime endDate) {
+  static pw.Widget _buildHeader(DateFormat dateFormat, DateTime startDate, DateTime endDate, pw.Font boldFont, pw.Font regularFont) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -73,19 +86,19 @@ class PdfReportService {
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             pw.Text(
-              'Stock & Sales Management',
-              style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+              'ระบบจัดการสต๊อกและขาย',
+              style: pw.TextStyle(font: boldFont, fontSize: 20, fontWeight: pw.FontWeight.bold),
             ),
             pw.Text(
-              'Report',
-              style: pw.TextStyle(fontSize: 16, color: PdfColors.grey700),
+              'รายงาน',
+              style: pw.TextStyle(font: regularFont, fontSize: 16, color: PdfColors.grey700),
             ),
           ],
         ),
         pw.SizedBox(height: 4),
         pw.Text(
-          'Date: ${dateFormat.format(startDate)} - ${dateFormat.format(endDate)}',
-          style: pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
+          'ช่วงวันที่: ${dateFormat.format(startDate)} - ${dateFormat.format(endDate)}',
+          style: pw.TextStyle(font: regularFont, fontSize: 11, color: PdfColors.grey600),
         ),
         pw.Divider(thickness: 2, color: PdfColors.indigo),
         pw.SizedBox(height: 12),
@@ -94,7 +107,7 @@ class PdfReportService {
   }
 
   /// Build report footer with page numbers
-  static pw.Widget _buildFooter(pw.Context context) {
+  static pw.Widget _buildFooter(pw.Context context, pw.Font regularFont) {
     return pw.Column(
       children: [
         pw.Divider(color: PdfColors.grey400),
@@ -103,12 +116,12 @@ class PdfReportService {
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             pw.Text(
-              'Generated: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
-              style: pw.TextStyle(fontSize: 9, color: PdfColors.grey500),
+              'สร้างเมื่อ: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
+              style: pw.TextStyle(font: regularFont, fontSize: 9, color: PdfColors.grey500),
             ),
             pw.Text(
-              'Page ${context.pageNumber} / ${context.pagesCount}',
-              style: pw.TextStyle(fontSize: 9, color: PdfColors.grey500),
+              'หน้า ${context.pageNumber} / ${context.pagesCount}',
+              style: pw.TextStyle(font: regularFont, fontSize: 9, color: PdfColors.grey500),
             ),
           ],
         ),
@@ -117,7 +130,7 @@ class PdfReportService {
   }
 
   /// Build section title
-  static pw.Widget _buildSectionTitle(String title) {
+  static pw.Widget _buildSectionTitle(String title, pw.Font boldFont) {
     return pw.Container(
       width: double.infinity,
       padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -128,6 +141,7 @@ class PdfReportService {
       child: pw.Text(
         title,
         style: pw.TextStyle(
+          font: boldFont,
           fontSize: 14,
           fontWeight: pw.FontWeight.bold,
           color: PdfColors.indigo900,
@@ -142,6 +156,8 @@ class PdfReportService {
     Map<String, dynamic> purchaseSummary,
     double profit,
     NumberFormat currencyFormat,
+    pw.Font regularFont,
+    pw.Font boldFont,
   ) {
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey300),
@@ -150,13 +166,15 @@ class PdfReportService {
         1: const pw.FlexColumnWidth(3),
       },
       children: [
-        _buildTableRow('Total Sales', '${salesSummary['total_sales'] ?? 0} orders', isHeader: false),
-        _buildTableRow('Sales Revenue', '${currencyFormat.format(salesSummary['total_revenue'] ?? 0)} Baht'),
-        _buildTableRow('Total Purchase Orders', '${purchaseSummary['total_orders'] ?? 0} orders'),
-        _buildTableRow('Purchase Cost', '${currencyFormat.format(purchaseSummary['total_cost'] ?? 0)} Baht'),
+        _buildTableRow('จำนวนรายการขาย', '${salesSummary['total_sales'] ?? 0} รายการ', regularFont, boldFont),
+        _buildTableRow('ยอดขายรวม', '฿${currencyFormat.format(salesSummary['total_revenue'] ?? 0)}', regularFont, boldFont),
+        _buildTableRow('จำนวนใบสั่งซื้อ', '${purchaseSummary['total_orders'] ?? 0} รายการ', regularFont, boldFont),
+        _buildTableRow('ยอดสั่งซื้อรวม', '฿${currencyFormat.format(purchaseSummary['total_cost'] ?? 0)}', regularFont, boldFont),
         _buildTableRow(
-          'Estimated Profit',
-          '${currencyFormat.format(profit)} Baht',
+          'กำไร (ประมาณ)',
+          '฿${currencyFormat.format(profit)}',
+          regularFont,
+          boldFont,
           valueColor: profit >= 0 ? PdfColors.green700 : PdfColors.red700,
         ),
       ],
@@ -164,19 +182,12 @@ class PdfReportService {
   }
 
   /// Build a table row
-  static pw.TableRow _buildTableRow(String label, String value, {bool isHeader = false, PdfColor? valueColor}) {
+  static pw.TableRow _buildTableRow(String label, String value, pw.Font regularFont, pw.Font boldFont, {PdfColor? valueColor}) {
     return pw.TableRow(
       children: [
         pw.Container(
           padding: const pw.EdgeInsets.all(8),
-          color: isHeader ? PdfColors.indigo100 : null,
-          child: pw.Text(
-            label,
-            style: pw.TextStyle(
-              fontSize: 11,
-              fontWeight: isHeader ? pw.FontWeight.bold : null,
-            ),
-          ),
+          child: pw.Text(label, style: pw.TextStyle(font: regularFont, fontSize: 11)),
         ),
         pw.Container(
           padding: const pw.EdgeInsets.all(8),
@@ -184,6 +195,7 @@ class PdfReportService {
           child: pw.Text(
             value,
             style: pw.TextStyle(
+              font: boldFont,
               fontSize: 11,
               fontWeight: pw.FontWeight.bold,
               color: valueColor,
@@ -195,15 +207,15 @@ class PdfReportService {
   }
 
   /// Build top products table
-  static pw.Widget _buildTopProductsTable(List<Map<String, dynamic>> products, NumberFormat currencyFormat) {
+  static pw.Widget _buildTopProductsTable(List<Map<String, dynamic>> products, NumberFormat currencyFormat, pw.Font regularFont, pw.Font boldFont) {
     return pw.TableHelper.fromTextArray(
-      headerStyle: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+      headerStyle: pw.TextStyle(font: boldFont, fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
       headerDecoration: const pw.BoxDecoration(color: PdfColors.indigo),
-      cellStyle: const pw.TextStyle(fontSize: 10),
+      cellStyle: pw.TextStyle(font: regularFont, fontSize: 10),
       cellPadding: const pw.EdgeInsets.all(6),
       cellAlignment: pw.Alignment.centerLeft,
       headerAlignment: pw.Alignment.centerLeft,
-      headers: ['#', 'Product Name', 'Qty Sold', 'Revenue (Baht)'],
+      headers: ['อันดับ', 'ชื่อสินค้า', 'จำนวนขาย', 'รายได้ (฿)'],
       data: products.asMap().entries.map((entry) {
         final i = entry.key;
         final p = entry.value;
@@ -224,15 +236,15 @@ class PdfReportService {
   }
 
   /// Build category report table
-  static pw.Widget _buildCategoryTable(List<Map<String, dynamic>> categories, NumberFormat currencyFormat) {
+  static pw.Widget _buildCategoryTable(List<Map<String, dynamic>> categories, NumberFormat currencyFormat, pw.Font regularFont, pw.Font boldFont) {
     return pw.TableHelper.fromTextArray(
-      headerStyle: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+      headerStyle: pw.TextStyle(font: boldFont, fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
       headerDecoration: const pw.BoxDecoration(color: PdfColors.indigo),
-      cellStyle: const pw.TextStyle(fontSize: 10),
+      cellStyle: pw.TextStyle(font: regularFont, fontSize: 10),
       cellPadding: const pw.EdgeInsets.all(6),
       cellAlignment: pw.Alignment.centerLeft,
       headerAlignment: pw.Alignment.centerLeft,
-      headers: ['Category', 'Products', 'Stock', 'Value (Baht)'],
+      headers: ['ประเภท', 'จำนวนสินค้า', 'สต๊อก', 'มูลค่า (฿)'],
       data: categories.map((cat) {
         return [
           cat['name']?.toString() ?? '-',
@@ -251,15 +263,15 @@ class PdfReportService {
   }
 
   /// Build customer report table
-  static pw.Widget _buildCustomerTable(List<Map<String, dynamic>> customers, NumberFormat currencyFormat) {
+  static pw.Widget _buildCustomerTable(List<Map<String, dynamic>> customers, NumberFormat currencyFormat, pw.Font regularFont, pw.Font boldFont) {
     return pw.TableHelper.fromTextArray(
-      headerStyle: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+      headerStyle: pw.TextStyle(font: boldFont, fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
       headerDecoration: const pw.BoxDecoration(color: PdfColors.indigo),
-      cellStyle: const pw.TextStyle(fontSize: 10),
+      cellStyle: pw.TextStyle(font: regularFont, fontSize: 10),
       cellPadding: const pw.EdgeInsets.all(6),
       cellAlignment: pw.Alignment.centerLeft,
       headerAlignment: pw.Alignment.centerLeft,
-      headers: ['Customer', 'Orders', 'Total Spent (Baht)'],
+      headers: ['ชื่อลูกค้า', 'คำสั่งซื้อ', 'ยอดซื้อรวม (฿)'],
       data: customers.map((cust) {
         return [
           cust['name']?.toString() ?? '-',
